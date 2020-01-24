@@ -1,0 +1,48 @@
+import pyowm, re, telebot
+
+owm = pyowm.OWM('1b94c9a73afc45ecfb1ae7e051b0b59f', language="ru")
+bot = telebot.TeleBot("800785257:AAGZ7nZ7MAz2dRSU7BkL5SgBOu2r7_kcpdI")
+
+
+# Редактирование вводимого города на окончание и регистр
+def wordRed(cor_str):
+    cor_str = cor_str.title()
+    if cor_str in ['Ростов-на-дону']:
+        return 'Ростове-на-Дону'
+    elif cor_str[-1] in list('иоqwertyuiopasdfghjklzxcvbnm'):
+        return cor_str
+    elif cor_str[-1] in list('уеаэяю'):
+        return re.sub(r'.$', 'е', cor_str)
+    elif cor_str[-2] == 'ш' and cor_str[-1] == 'ы':
+        return re.sub(r'.$', 'ах', cor_str)
+    elif cor_str[-1] not in list('уеыаоэяиюй'):
+        return cor_str + 'е'
+    else:
+        return re.sub(r'..$', 'ах', cor_str)
+
+
+@bot.message_handler(content_types=['text'])
+def send_echo(message):
+    try:
+        observation = owm.weather_at_place(message.text)
+
+        w = observation.get_weather()
+        temp = w.get_temperature('celsius')["temp"]
+
+        if temp < 5:
+            rec = 'Сейчас холодно, думаю, тебе лучше одеться теплее'
+        elif temp < 15:
+            rec = 'Сейчас прохладно, накинь куртку.'
+        else:
+            rec = 'Словно Лето! Одевай шлепки и плавки, и дуй на пляж! :)'
+
+        bot.send_message(message.chat.id,
+                         'Сейчас в {} {}.\nТемпература: {}C\n\n{}'.format(wordRed(message.text),
+                                                                          w.get_detailed_status(),
+                                                                          str(temp), rec))
+    except:
+        bot.send_message(message.chat.id,
+                         'Проверьте правильность ввода города, либо введите на Английском языке.')
+
+
+bot.polling(none_stop=True)
